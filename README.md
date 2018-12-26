@@ -1,1 +1,2 @@
-"# mpv scripts" 
+# mpv scripts
+* recent.lua
