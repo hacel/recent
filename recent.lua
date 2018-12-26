@@ -1,3 +1,6 @@
+-- Default hotkey is "ENTER"
+-- Default log path is scripts/recent.log
+
 local utils = require("mp.utils")
 
 local keybind = "ENTER"
