@@ -11,6 +11,7 @@ local cur_file_path = ""
 
 -- Save file path on file load
 function writepath()
+    unbind()
     cur_file_path = utils.join_path(mp.get_property("working-directory"), mp.get_property("path"))
 end
 
@@ -41,25 +42,29 @@ function readlog()
 
     mp.osd_message(ass..'{\\fs10}'..table_to_string(files), 10)
 
-    mp.add_key_binding("1", "1", function() load(files, 0) end)
-    mp.add_key_binding("2", "2", function() load(files, 1) end)
-    mp.add_key_binding("3", "3", function() load(files, 2) end)
-    mp.add_key_binding("4", "4", function() load(files, 3) end)
-    mp.add_key_binding("5", "5", function() load(files, 4) end)
-    mp.add_key_binding("ESC", "ESC", function() load(nil, -1) end)
+    mp.add_key_binding("1", "recent-1", function() load(files, 0) end)
+    mp.add_key_binding("2", "recent-2", function() load(files, 1) end)
+    mp.add_key_binding("3", "recent-3", function() load(files, 2) end)
+    mp.add_key_binding("4", "recent-4", function() load(files, 3) end)
+    mp.add_key_binding("5", "recent-5", function() load(files, 4) end)
+    mp.add_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
 end
 
 -- Command load and remove binds
 function load(files, choice)
-    mp.remove_key_binding("1")
-    mp.remove_key_binding("2")
-    mp.remove_key_binding("3")
-    mp.remove_key_binding("4")
-    mp.remove_key_binding("5")
-    mp.remove_key_binding("ESC")
+    unbind()
     mp.osd_message("", 0)
     if choice == -1 then return end
     mp.commandv("loadfile", files[#files-choice], "replace")
+end
+
+function unbind()
+    mp.remove_key_binding("recent-1")
+    mp.remove_key_binding("recent-2")
+    mp.remove_key_binding("recent-3")
+    mp.remove_key_binding("recent-4")
+    mp.remove_key_binding("recent-5")
+    mp.remove_key_binding("recent-ESC")
 end
 
 -- Make list readable on OSD
