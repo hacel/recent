@@ -42,17 +42,17 @@ function readlog()
 
     mp.osd_message(ass.."{\\fs10}"..table_to_string(files), 100)
 
-    mp.add_key_binding("1", "recent-1", function() load(files, 0) end)
-    mp.add_key_binding("2", "recent-2", function() load(files, 1) end)
-    mp.add_key_binding("3", "recent-3", function() load(files, 2) end)
-    mp.add_key_binding("4", "recent-4", function() load(files, 3) end)
-    mp.add_key_binding("5", "recent-5", function() load(files, 4) end)
-    mp.add_key_binding("6", "recent-6", function() load(files, 5) end)
-    mp.add_key_binding("7", "recent-7", function() load(files, 6) end)
-    mp.add_key_binding("8", "recent-8", function() load(files, 7) end)
-    mp.add_key_binding("9", "recent-9", function() load(files, 8) end)
-    mp.add_key_binding("0", "recent-0", function() load(files, 9) end)
-    mp.add_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
+    mp.add_forced_key_binding("1", "recent-1", function() load(files, 0) end)
+    mp.add_forced_key_binding("2", "recent-2", function() load(files, 1) end)
+    mp.add_forced_key_binding("3", "recent-3", function() load(files, 2) end)
+    mp.add_forced_key_binding("4", "recent-4", function() load(files, 3) end)
+    mp.add_forced_key_binding("5", "recent-5", function() load(files, 4) end)
+    mp.add_forced_key_binding("6", "recent-6", function() load(files, 5) end)
+    mp.add_forced_key_binding("7", "recent-7", function() load(files, 6) end)
+    mp.add_forced_key_binding("8", "recent-8", function() load(files, 7) end)
+    mp.add_forced_key_binding("9", "recent-9", function() load(files, 8) end)
+    mp.add_forced_key_binding("0", "recent-0", function() load(files, 9) end)
+    mp.add_forced_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
 end
 
 -- Command load and remove binds
