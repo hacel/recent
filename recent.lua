@@ -59,7 +59,7 @@ end
 function load(files, choice)
     unbind()
     mp.osd_message("", 0)
-    if choice == -1 then return end
+    if choice == -1 or choice >= LISTSIZE then return end
     mp.commandv("loadfile", files[#files-choice], "replace")
 end
 
@@ -82,7 +82,7 @@ function table_to_string(tbl)
     local result = ""
     for k, v in pairs(tbl) do
         local s, n = utils.split_path(v)
-        result = #tbl+1-k..": "..n..result
+        result = #tbl+1-k.."> "..n..result
         result = "\n\n"..result
     end
     return result
