@@ -1,10 +1,10 @@
--- Default hotkey is "ENTER"
--- Default log path is scripts/recent.log
-
 local utils = require("mp.utils")
 
-local keybind = "ENTER"
-local logpath = mp.find_config_file('scripts').."/recent.log"
+-- Settings --
+local LISTSIZE = 5
+local KEYBIND = "ENTER"
+local LOGPATH = mp.find_config_file("scripts").."/recent.log"
+--------------
 
 local ass = mp.get_property_osd("osd-ass-cc/0")
 local cur_file_path = ""
@@ -20,27 +20,27 @@ end
 function writelog()
     local f, s
 
-    f = (io.open(logpath, 'r+') or io.open(logpath, 'w+'))
+    f = (io.open(LOGPATH, "r+") or io.open(LOGPATH, "w+"))
     s = f:read("*a")
-    s = s:gsub("[^\n]-"..esc_string(cur_file_path)..'.-\n', '')
+    s = s:gsub("[^\n]-"..esc_string(cur_file_path)..".-\n", "")
     f:seek("set")
-    f:write(s, ('%s\n'):format(cur_file_path))
+    f:write(s, ("[%s] %s\n"):format(os.date("%d/%m/%y %X"), cur_file_path))
     f:close()
 end
 
 -- Read log, display list and add keybinds
 function readlog()
     local files = {}, f
-    f = io.open(logpath, 'r')
+    f = io.open(LOGPATH, "r")
     if f == nil then return end
-    for line in f:lines() do table.insert(files, line) end
+    for line in f:lines() do print(line:sub(21));table.insert(files, line:sub(21)) end
     f:close()
 
-    if #files > 5 then
+    if #files > LISTSIZE then
         files = {unpack(files, #files-4, #files)}
     end
 
-    mp.osd_message(ass..'{\\fs10}'..table_to_string(files), 10)
+    mp.osd_message(ass.."{\\fs10}"..table_to_string(files), 100)
 
     mp.add_key_binding("1", "recent-1", function() load(files, 0) end)
     mp.add_key_binding("2", "recent-2", function() load(files, 1) end)
@@ -86,4 +86,4 @@ end
 mp.register_event("file-loaded", writepath)
 mp.register_event("end-file", writelog)
 mp.register_event("idle", readlog)
-mp.add_key_binding(keybind, "display-recent", readlog)
+mp.add_key_binding(KEYBIND, "display-recent", readlog)
