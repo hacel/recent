@@ -1,7 +1,7 @@
 local utils = require("mp.utils")
 
 -- Settings --
-local LISTSIZE = 9 -- max, need to add more binds
+local LISTSIZE = 10 -- max, need to add more binds
 local KEYBIND = "ENTER"
 local LOGPATH = mp.find_config_file("scripts").."/recent.log"
 --------------
@@ -51,6 +51,7 @@ function readlog()
     mp.add_key_binding("7", "recent-7", function() load(files, 6) end)
     mp.add_key_binding("8", "recent-8", function() load(files, 7) end)
     mp.add_key_binding("9", "recent-9", function() load(files, 8) end)
+    mp.add_key_binding("0", "recent-0", function() load(files, 9) end)
     mp.add_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
 end
 
@@ -72,6 +73,7 @@ function unbind()
     mp.remove_key_binding("recent-7")
     mp.remove_key_binding("recent-8")
     mp.remove_key_binding("recent-9")
+    mp.remove_key_binding("recent-0")
     mp.remove_key_binding("recent-ESC")
 end
 
