@@ -1,7 +1,7 @@
 local utils = require("mp.utils")
 
 -- Settings --
-local LISTSIZE = 5 -- only 9 binds
+local LISTSIZE = 9 -- max, need to add more binds
 local KEYBIND = "ENTER"
 local LOGPATH = mp.find_config_file("scripts").."/recent.log"
 --------------
@@ -37,7 +37,7 @@ function readlog()
     f:close()
 
     if #files > LISTSIZE then
-        files = {unpack(files, #files-4, #files)}
+        files = {unpack(files, #files-LISTSIZE+1, #files)}
     end
 
     mp.osd_message(ass.."{\\fs10}"..table_to_string(files), 100)
