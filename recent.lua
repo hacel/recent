@@ -33,7 +33,7 @@ function readlog()
     local files = {}, f
     f = io.open(LOGPATH, "r")
     if f == nil then return end
-    for line in f:lines() do print(line:sub(21));table.insert(files, line:sub(21)) end
+    for line in f:lines() do table.insert(files, line:sub(21)) end
     f:close()
 
     if #files > LISTSIZE then
