@@ -4,6 +4,7 @@ local utils = require("mp.utils")
 local LISTSIZE = 10 -- max, need to add more binds
 local KEYBIND = "`"
 local LOGPATH = mp.find_config_file("scripts").."/recent.log"
+local FONTSCALE = 50
 --------------
 
 local ass = mp.get_property_osd("osd-ass-cc/0")
@@ -24,6 +25,7 @@ function writelog()
     s = f:read("*a")
     s = s:gsub("[^\n]-"..esc_string(cur_file_path)..".-\n", "")
     f:seek("set")
+    -- Date is hardcoded in `readlog`, fix that if you want to change format
     f:write(s, ("[%s] %s\n"):format(os.date("%d/%m/%y %X"), cur_file_path))
     f:close()
 end
@@ -40,7 +42,7 @@ function readlog()
         files = {unpack(files, #files-LISTSIZE+1, #files)}
     end
 
-    mp.osd_message(ass.."{\\fs10}"..table_to_string(files), 100)
+    drawtable(files)
 
     mp.add_forced_key_binding("1", "recent-1", function() load(files, 0) end)
     mp.add_forced_key_binding("2", "recent-2", function() load(files, 1) end)
@@ -55,10 +57,11 @@ function readlog()
     mp.add_forced_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
 end
 
--- Command load and remove binds
+
+
+-- Load file and remove binds
 function load(files, choice)
     unbind()
-    mp.osd_message("", 0)
     if choice == -1 or choice >= LISTSIZE then return end
     mp.commandv("loadfile", files[#files-choice], "replace")
 end
@@ -75,17 +78,25 @@ function unbind()
     mp.remove_key_binding("recent-9")
     mp.remove_key_binding("recent-0")
     mp.remove_key_binding("recent-ESC")
+    mp.set_osd_ass(0, 0, "")
 end
 
--- Make list readable on OSD
-function table_to_string(tbl)
-    local result = ""
-    for k, v in pairs(tbl) do
-        local s, n = utils.split_path(v)
-        result = #tbl+1-k.."> "..n..result
-        result = "\n\n"..result
+-- Display list on OSD and terminal
+function drawtable(table)
+    local size = #table
+    local msg = "{\\fscx"..FONTSCALE.."}{\\fscy"..FONTSCALE.."}"
+    local key
+    for i=size, 1, -1 do
+        if size == 10 and i == 1  then
+            key = 0
+        else
+            key = size-i+1
+        end
+        local _, n = utils.split_path(table[i])
+        msg = msg.."("..key..")  "..n.."\\N\\N"
+        print("("..key..") "..n)
     end
-    return result
+    mp.set_osd_ass(0, 0, msg)
 end
 
 -- Escape string for pattern matching
