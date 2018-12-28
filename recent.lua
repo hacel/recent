@@ -18,8 +18,8 @@ end
 -- Write path to log on file end
 -- removing duplicates along the way
 function writelog()
+    if cur_file_path == "" then return end
     local f, s
-
     f = (io.open(LOGPATH, "r+") or io.open(LOGPATH, "w+"))
     s = f:read("*a")
     s = s:gsub("[^\n]-"..esc_string(cur_file_path)..".-\n", "")
