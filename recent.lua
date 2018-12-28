@@ -2,7 +2,7 @@ local utils = require("mp.utils")
 
 -- Settings --
 local LISTSIZE = 10 -- max, need to add more binds
-local KEYBIND = "ENTER"
+local KEYBIND = "`"
 local LOGPATH = mp.find_config_file("scripts").."/recent.log"
 --------------
 
