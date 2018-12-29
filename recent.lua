@@ -31,13 +31,6 @@ function unbind()
     mp.set_osd_ass(0, 0, "")
 end
 
--- Load file and remove binds
-function load(list, choice)
-    unbind()
-    if choice == -1 or choice >= o.list_size then return end
-    mp.commandv("loadfile", list[#list-choice], "replace")
-end
-
 -- Save file path on file load
 -- `file-loaded` event
 function writepath()
@@ -93,15 +86,18 @@ function drawtable(table)
     mp.set_osd_ass(0, 0, msg)
 end
 
+-- Load file and remove binds
+function load(list, choice)
+    unbind()
+    if choice == -1 or choice >= #list then return end
+    mp.commandv("loadfile", list[#list-choice], "replace")
+end
+
 -- Read log, display list and add keybinds
 -- `idle` event or hotkey
 function readlog()
     local f = io.open(o.log_path, "r")
-    if f == nil then
-        print("Log not found")
-        return
-    end
-
+    if f == nil then return end
     local content = {}
     for line in f:lines() do
         content[#content+1] = line
