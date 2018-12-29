@@ -3,7 +3,7 @@ local utils = require("mp.utils")
 -- Settings --
 local LISTSIZE = 10 -- max, need to add more binds
 local KEYBIND = "`"
-local LOGPATH = mp.find_config_file("scripts").."/recent.log"
+local LOGPATH = mp.find_config_file("history.log")
 local FONTSCALE = 50
 --------------
 
@@ -32,12 +32,18 @@ end
 
 -- Read log, display list and add keybinds
 function readlog()
+    if LOGPATH == nil then
+        print("Log not found")
+        return
+    end
+
     local files = {}, f
     f = io.open(LOGPATH, "r")
-    if f == nil then return end
-    for line in f:lines() do table.insert(files, line:sub(21)) end
-    f:close()
 
+    for line in f:lines() do
+            table.insert(files, line:sub(21))
+    end
+    f:close()
     if #files > LISTSIZE then
         files = {unpack(files, #files-LISTSIZE+1, #files)}
     end
