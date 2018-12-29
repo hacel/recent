@@ -5,71 +5,14 @@ local LISTSIZE = 10 -- max, need to add more binds
 local KEYBIND = "`"
 local LOGPATH = mp.find_config_file("history.log")
 local FONTSCALE = 50
+local DATEFORMAT = "%d/%m/%y %X"
 --------------
 
-local ass = mp.get_property_osd("osd-ass-cc/0")
 local cur_file_path = ""
 
--- Save file path on file load
-function writepath()
-    unbind()
-    cur_file_path = utils.join_path(mp.get_property("working-directory"), mp.get_property("path"))
-end
-
--- Write path to log on file end
--- removing duplicates along the way
-function writelog()
-    if cur_file_path == "" then return end
-    local f, s
-    f = (io.open(LOGPATH, "r+") or io.open(LOGPATH, "w+"))
-    s = f:read("*a")
-    s = s:gsub("[^\n]-"..esc_string(cur_file_path)..".-\n", "")
-    f:seek("set")
-    -- Date is hardcoded in `readlog`, fix that if you want to change format
-    f:write(s, ("[%s] %s\n"):format(os.date("%d/%m/%y %X"), cur_file_path))
-    f:close()
-end
-
--- Read log, display list and add keybinds
-function readlog()
-    if LOGPATH == nil then
-        print("Log not found")
-        return
-    end
-
-    local files = {}, f
-    f = io.open(LOGPATH, "r")
-
-    for line in f:lines() do
-            table.insert(files, line:sub(21))
-    end
-    f:close()
-    if #files > LISTSIZE then
-        files = {unpack(files, #files-LISTSIZE+1, #files)}
-    end
-
-    drawtable(files)
-
-    mp.add_forced_key_binding("1", "recent-1", function() load(files, 0) end)
-    mp.add_forced_key_binding("2", "recent-2", function() load(files, 1) end)
-    mp.add_forced_key_binding("3", "recent-3", function() load(files, 2) end)
-    mp.add_forced_key_binding("4", "recent-4", function() load(files, 3) end)
-    mp.add_forced_key_binding("5", "recent-5", function() load(files, 4) end)
-    mp.add_forced_key_binding("6", "recent-6", function() load(files, 5) end)
-    mp.add_forced_key_binding("7", "recent-7", function() load(files, 6) end)
-    mp.add_forced_key_binding("8", "recent-8", function() load(files, 7) end)
-    mp.add_forced_key_binding("9", "recent-9", function() load(files, 8) end)
-    mp.add_forced_key_binding("0", "recent-0", function() load(files, 9) end)
-    mp.add_forced_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
-end
-
-
-
--- Load file and remove binds
-function load(files, choice)
-    unbind()
-    if choice == -1 or choice >= LISTSIZE then return end
-    mp.commandv("loadfile", files[#files-choice], "replace")
+-- Escape string for pattern matching
+function esc_string(str)
+    return str:gsub("([%p])", "%%%1")
 end
 
 function unbind()
@@ -85,6 +28,50 @@ function unbind()
     mp.remove_key_binding("recent-0")
     mp.remove_key_binding("recent-ESC")
     mp.set_osd_ass(0, 0, "")
+end
+
+-- Load file and remove binds
+function load(list, choice)
+    unbind()
+    if choice == -1 or choice >= LISTSIZE then return end
+    mp.commandv("loadfile", list[#list-choice], "replace")
+end
+
+-- Save file path on file load
+-- `file-loaded` event
+function writepath()
+    unbind()
+    cur_file_path = utils.join_path(mp.get_property("working-directory"), mp.get_property("path"))
+end
+
+-- Write path to log on file end
+-- removing duplicates along the way
+-- `end-file` event
+function writelog()
+    if cur_file_path == "" then return end
+    local f = io.open(LOGPATH, "r")
+    if f == nil then
+        f = io.open(LOGPATH, "w+")
+        f:write(("[%s] %s\n"):format(os.date(DATEFORMAT), cur_file_path))
+        f:close()
+        return
+    end
+
+    local content = {}
+    for line in f:lines() do
+        line = line:gsub("^.-"..esc_string(cur_file_path)..".-$", "")
+        if line ~= "" then
+            content[#content+1] = line
+        end
+    end
+    f:close()
+
+    f = io.open(LOGPATH, "w+")
+    for i=1, #content do
+        f:write(("%s\n"):format(content[i]))
+    end
+    f:write(("[%s] %s\n"):format(os.date(DATEFORMAT), cur_file_path))
+    f:close()
 end
 
 -- Display list on OSD and terminal
@@ -105,9 +92,38 @@ function drawtable(table)
     mp.set_osd_ass(0, 0, msg)
 end
 
--- Escape string for pattern matching
-function esc_string(str)
-    return str:gsub("([%\\%[%-%]%.%(%)])", "%%%1")
+-- Read log, display list and add keybinds
+-- `idle` event or hotkey
+function readlog()
+    if LOGPATH == nil then
+        print("Log not found")
+        return
+    end
+
+    local f = io.open(LOGPATH, "r")
+    local content = {}
+    for line in f:lines() do
+        content[#content+1] = line
+    end
+    f:close()
+
+    local list = {}
+    for i=#content-LISTSIZE+1, #content, 1 do
+        list[#list+1] = string.gsub(content[i], "^(%[.-%]%s)", "")
+    end
+    drawtable(list)
+
+    mp.add_forced_key_binding("1", "recent-1", function() load(list, 0) end)
+    mp.add_forced_key_binding("2", "recent-2", function() load(list, 1) end)
+    mp.add_forced_key_binding("3", "recent-3", function() load(list, 2) end)
+    mp.add_forced_key_binding("4", "recent-4", function() load(list, 3) end)
+    mp.add_forced_key_binding("5", "recent-5", function() load(list, 4) end)
+    mp.add_forced_key_binding("6", "recent-6", function() load(list, 5) end)
+    mp.add_forced_key_binding("7", "recent-7", function() load(list, 6) end)
+    mp.add_forced_key_binding("8", "recent-8", function() load(list, 7) end)
+    mp.add_forced_key_binding("9", "recent-9", function() load(list, 8) end)
+    mp.add_forced_key_binding("0", "recent-0", function() load(list, 9) end)
+    mp.add_forced_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
 end
 
 mp.register_event("file-loaded", writepath)
