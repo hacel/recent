@@ -1,13 +1,14 @@
+local o = {
+    keybind = "`",
+    list_size = 10,
+    log_path = "history.log",
+    font_scale = 50,
+    date_format = "%d/%m/%y %X"
+}
+(require "mp.options").read_options(o)
 local utils = require("mp.utils")
 
--- Settings --
-local LISTSIZE = 10 -- max, need to add more binds
-local KEYBIND = "`"
-local LOGPATH = mp.find_config_file("history.log")
-local FONTSCALE = 50
-local DATEFORMAT = "%d/%m/%y %X"
---------------
-
+o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
 local cur_file_path = ""
 
 -- Escape string for pattern matching
@@ -33,7 +34,7 @@ end
 -- Load file and remove binds
 function load(list, choice)
     unbind()
-    if choice == -1 or choice >= LISTSIZE then return end
+    if choice == -1 or choice >= o.list_size then return end
     mp.commandv("loadfile", list[#list-choice], "replace")
 end
 
@@ -49,10 +50,10 @@ end
 -- `end-file` event
 function writelog()
     if cur_file_path == "" then return end
-    local f = io.open(LOGPATH, "r")
+    local f = io.open(o.log_path, "r")
     if f == nil then
-        f = io.open(LOGPATH, "w+")
-        f:write(("[%s] %s\n"):format(os.date(DATEFORMAT), cur_file_path))
+        f = io.open(o.log_path, "w+")
+        f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
         f:close()
         return
     end
@@ -66,18 +67,18 @@ function writelog()
     end
     f:close()
 
-    f = io.open(LOGPATH, "w+")
+    f = io.open(o.log_path, "w+")
     for i=1, #content do
         f:write(("%s\n"):format(content[i]))
     end
-    f:write(("[%s] %s\n"):format(os.date(DATEFORMAT), cur_file_path))
+    f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
     f:close()
 end
 
 -- Display list on OSD and terminal
 function drawtable(table)
     local size = #table
-    local msg = "{\\fscx"..FONTSCALE.."}{\\fscy"..FONTSCALE.."}"
+    local msg = "{\\fscx"..o.font_scale.."}{\\fscy"..o.font_scale.."}"
     local key
     for i=size, 1, -1 do
         if size == 10 and i == 1  then
@@ -95,12 +96,12 @@ end
 -- Read log, display list and add keybinds
 -- `idle` event or hotkey
 function readlog()
-    if LOGPATH == nil then
+    local f = io.open(o.log_path, "r")
+    if f == nil then
         print("Log not found")
         return
     end
 
-    local f = io.open(LOGPATH, "r")
     local content = {}
     for line in f:lines() do
         content[#content+1] = line
@@ -108,8 +109,14 @@ function readlog()
     f:close()
 
     local list = {}
-    for i=#content-LISTSIZE+1, #content, 1 do
-        list[#list+1] = string.gsub(content[i], "^(%[.-%]%s)", "")
+    if #content > o.list_size then
+        for i=(#content-o.list_size)+1, #content, 1 do
+            list[#list+1] = string.gsub(content[i], "^(%[.-%]%s)", "")
+        end
+    else
+        for i=1, #content, 1 do
+            list[i] = string.gsub(content[i], "^(%[.-%]%s)", "")
+        end
     end
     drawtable(list)
 
@@ -129,4 +136,4 @@ end
 mp.register_event("file-loaded", writepath)
 mp.register_event("end-file", writelog)
 mp.register_event("idle", readlog)
-mp.add_key_binding(KEYBIND, "display-recent", readlog)
+mp.add_key_binding(o.keybind, "display-recent", readlog)
