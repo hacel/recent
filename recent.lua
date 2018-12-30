@@ -12,7 +12,7 @@ local o = {
 local utils = require("mp.utils")
 
 o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
-local cur_file_path = ""
+local cur_file_path
 
 -- Escape string for pattern matching
 function esc_string(str)
@@ -55,8 +55,11 @@ end
 -- removing duplicates along the way
 -- `end-file` event
 function writelog()
-    if cur_file_path == "" then return end
+    if not cur_file_path then return end
+
     local f = io.open(o.log_path, "r")
+
+    -- Create the file and return if it doesn't exist
     if f == nil then
         f = io.open(o.log_path, "w+")
         f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
@@ -64,22 +67,33 @@ function writelog()
         return
     end
 
+    -- Read file into memory and remove duplicates
     local content = {}
+    local is_last
     for line in f:lines() do
-        line = line:gsub("^.-"..esc_string(cur_file_path)..".-$", "")
+        line, is_last = line:gsub("^.-"..esc_string(cur_file_path)..".-$", "")
         if line ~= "" then
             content[#content+1] = line
         end
     end
     f:close()
 
+    -- Write contents back to file without duplicates
     f = io.open(o.log_path, "w+")
     for i=1, #content do
         f:write(("%s\n"):format(content[i]))
     end
-    f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
+
+    -- If it's the last line and auto save is turned off then don't add it
+    if (is_last == 0) or o.auto_save then
+        f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
+        mp.osd_message("Saved entry to log")
+        print("Saved entry to log")
+    else
+        mp.osd_message("Deleted entry from log")
+        print("Deleted entry from log")
+    end
     f:close()
-    print("Saved to history log")
 end
 
 -- Display list on OSD and terminal
