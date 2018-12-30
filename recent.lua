@@ -32,10 +32,9 @@ function unbind()
     mp.set_osd_ass(0, 0, "")
 end
 
--- Handle urls
+-- Handle URLs
 function getpath()
     local path = mp.get_property("path")
-    print(path, path:find("http.?://"))
     if path:find("http.?://") then
         return path
     else
