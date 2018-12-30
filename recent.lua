@@ -1,10 +1,12 @@
 local o = {
-    keybind = "`",
+    display_bind = "`",
+    save_bind = "~",
     list_size = 10,
     log_path = "history.log",
     font_scale = 50,
     date_format = "%d/%m/%y %X",
-    split_urls = true
+    split_urls = true,
+    auto_save = true,
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
@@ -32,7 +34,7 @@ function unbind()
     mp.set_osd_ass(0, 0, "")
 end
 
--- Handle URLs
+-- Handle urls
 function getpath()
     local path = mp.get_property("path")
     if path:find("http.?://") then
@@ -77,6 +79,7 @@ function writelog()
     end
     f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
     f:close()
+    print("Saved to history log")
 end
 
 -- Display list on OSD and terminal
@@ -146,7 +149,10 @@ function readlog()
     mp.add_forced_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
 end
 
+if o.auto_save then
+    mp.register_event("end-file", writelog)
+end
 mp.register_event("file-loaded", writepath)
-mp.register_event("end-file", writelog)
 mp.register_event("idle", readlog)
-mp.add_key_binding(o.keybind, "display-recent", readlog)
+mp.add_key_binding(o.display_bind, "display-recent", readlog)
+mp.add_key_binding(o.save_bind, "recent-save", writelog)
