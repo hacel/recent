@@ -3,7 +3,8 @@ local o = {
     list_size = 10,
     log_path = "history.log",
     font_scale = 50,
-    date_format = "%d/%m/%y %X"
+    date_format = "%d/%m/%y %X",
+    split_urls = true
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
@@ -31,11 +32,22 @@ function unbind()
     mp.set_osd_ass(0, 0, "")
 end
 
+-- Handle urls
+function getpath()
+    local path = mp.get_property("path")
+    print(path, path:find("http.?://"))
+    if path:find("http.?://") then
+        return path
+    else
+        return utils.join_path(mp.get_property("working-directory"), path)
+    end
+end
+
 -- Save file path on file load
 -- `file-loaded` event
 function writepath()
     unbind()
-    cur_file_path = utils.join_path(mp.get_property("working-directory"), mp.get_property("path"))
+    cur_file_path = getpath()
 end
 
 -- Write path to log on file end
@@ -79,9 +91,15 @@ function drawtable(table)
         else
             key = size-i+1
         end
-        local _, n = utils.split_path(table[i])
-        msg = msg.."("..key..")  "..n.."\\N\\N"
-        print("("..key..") "..n)
+
+        local p
+        if not o.split_urls and table[i]:find("http.?://") then
+            p = table[i]
+        else
+            _, p = utils.split_path(table[i])
+        end
+        msg = msg.."("..key..")  "..p.."\\N\\N"
+        print("("..key..") "..p)
     end
     mp.set_osd_ass(0, 0, msg)
 end
