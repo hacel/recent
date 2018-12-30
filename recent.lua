@@ -1,6 +1,6 @@
 local o = {
     display_bind = "`",
-    save_bind = "~",
+    save_bind = "",
     list_size = 10,
     log_path = "history.log",
     font_scale = 50,
@@ -55,8 +55,8 @@ end
 -- removing duplicates along the way
 -- `end-file` event
 function writelog()
+    local saved = 0 -- Whether an entry was actually saved
     if not cur_file_path then return end
-
     local f = io.open(o.log_path, "r")
 
     -- Create the file and return if it doesn't exist
@@ -87,13 +87,24 @@ function writelog()
     -- If it's the last line and auto save is turned off then don't add it
     if (is_last == 0) or o.auto_save then
         f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
+        saved = 1
+    else
+        saved = 0
+    end
+    f:close()
+    return saved
+end
+
+-- Save key handler
+function writelog_handler()
+    local saved = writelog()
+    if saved == 1 then
         mp.osd_message("Saved entry to log")
         print("Saved entry to log")
     else
         mp.osd_message("Deleted entry from log")
         print("Deleted entry from log")
     end
-    f:close()
 end
 
 -- Display list on OSD and terminal
@@ -169,4 +180,4 @@ end
 mp.register_event("file-loaded", writepath)
 mp.register_event("idle", readlog)
 mp.add_key_binding(o.display_bind, "display-recent", readlog)
-mp.add_key_binding(o.save_bind, "recent-save", writelog)
+mp.add_key_binding(o.save_bind, "recent-save", writelog_handler)
