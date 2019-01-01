@@ -1,12 +1,13 @@
 local o = {
-    display_bind = "`",
+    auto_save = true,
     save_bind = "",
+    display_bind = "`",
     list_size = 10,
     log_path = "history.log",
-    font_scale = 50,
     date_format = "%d/%m/%y %X",
+    font_scale = 50,
+    border_size = 0.7,
     split_urls = true,
-    auto_save = true,
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
@@ -110,7 +111,8 @@ end
 -- Display list on OSD and terminal
 function drawtable(table)
     local size = #table
-    local msg = "{\\fscx"..o.font_scale.."}{\\fscy"..o.font_scale.."}"
+    local msg = string.format("{\\fscx%f}{\\fscy%f}{\\bord%f}",
+                o.font_scale, o.font_scale, o.border_size)
     local key
     for i=size, 1, -1 do
         if size == 10 and i == 1  then
