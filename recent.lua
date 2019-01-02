@@ -135,22 +135,27 @@ function drawtable(table, choice)
     local hi_end = "{\\1c&HFFFFFF}"
     local key
     for i=size, 1, -1 do
-        if i == size-10+1 then
+        if i > size-9 then
+            key = size-i+1
+        elseif i == size-9 then
             key = 0
         else
-            key = size-i+1
+            key = "●"
         end
+
         local p
         if not o.split_urls and table[i]:find("http.?://") then
             p = table[i]
         else
             _, p = utils.split_path(table[i])
         end
+
         if i == size-choice then
             msg = msg..hi_start.."("..key..")  "..p.."\\N\\N"..hi_end
         else
             msg = msg.."("..key..")  "..p.."\\N\\N"
         end
+
         if not table_drawn then
             print("("..key..") "..p)
         end
