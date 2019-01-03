@@ -7,15 +7,18 @@ local o = {
     auto_run_idle = true,
     -- Display menu bind
     display_bind = "`",
+    -- Middle click: Select; Right click: Exit;
+    -- Scroll wheel: Up/Down
+    mouse_controls = true,
     -- Can go past 10 but you'll have to scroll down
-    list_size = 10,
+    list_size = 15,
     -- Reads from config directory or an absolute path
     log_path = "history.log",
     -- Reads from config directory or an absolute path
     date_format = "%d/%m/%y %X",
     -- Font settings
     font_scale = 50,
-    border_size = 0.8,
+    border_size = 0.7,
     -- Highlight color in BGR hexadecimal
     hi_color = "H46CFFF",
     -- Splitting urls; yt links would look like `?watch...`
@@ -45,6 +48,12 @@ end
 
 -- Script exit function
 function unbind()
+    if o.mouse_controls then
+        mp.remove_key_binding("recent-WUP")
+        mp.remove_key_binding("recent-WDOWN")
+        mp.remove_key_binding("recent-MMID")
+        mp.remove_key_binding("recent-MRIGHT")
+    end
     mp.remove_key_binding("recent-UP")
     mp.remove_key_binding("recent-DOWN")
     mp.remove_key_binding("recent-ENTER")
@@ -174,7 +183,7 @@ end
 -- Load file and remove binds
 function load(list, choice)
     unbind()
-    if choice == -1 or choice >= #list then return end
+    if choice >= #list then return end
     mp.commandv("loadfile", list[#list-choice], "replace")
 end
 
@@ -215,6 +224,20 @@ function readlog(table)
     mp.add_forced_key_binding("ENTER", "recent-ENTER", function()
         load(list, choice)
     end)
+    if o.mouse_controls then
+        mp.add_forced_key_binding("WHEEL_UP", "recent-WUP", function()
+            choice = select(choice, -1, list)
+        end)
+        mp.add_forced_key_binding("WHEEL_DOWN", "recent-WDOWN", function()
+            choice = select(choice, 1, list)
+        end)
+        mp.add_forced_key_binding("MBTN_MID", "recent-MMID", function()
+            load(list, choice)
+        end)
+        mp.add_forced_key_binding("MBTN_RIGHT", "recent-MRIGHT", function()
+            unbind()
+        end)
+    end
     mp.add_forced_key_binding("1", "recent-1", function() load(list, 0) end)
     mp.add_forced_key_binding("2", "recent-2", function() load(list, 1) end)
     mp.add_forced_key_binding("3", "recent-3", function() load(list, 2) end)
@@ -225,7 +248,7 @@ function readlog(table)
     mp.add_forced_key_binding("8", "recent-8", function() load(list, 7) end)
     mp.add_forced_key_binding("9", "recent-9", function() load(list, 8) end)
     mp.add_forced_key_binding("0", "recent-0", function() load(list, 9) end)
-    mp.add_forced_key_binding("ESC", "recent-ESC", function() load(nil, -1) end)
+    mp.add_forced_key_binding("ESC", "recent-ESC", function() unbind() end)
     table_drawn = true
 end
 
