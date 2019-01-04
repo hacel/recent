@@ -1,7 +1,7 @@
 local o = {
     -- Automatically save to log, otherwise only saves when requested
+    -- you need to bind a save key if you disable it
     auto_save = true,
-    -- Make sure to bind a save key if you disable this
     save_bind = "",
     -- Runs automatically when --idle
     auto_run_idle = true,
@@ -10,7 +10,7 @@ local o = {
     -- Middle click: Select; Right click: Exit;
     -- Scroll wheel: Up/Down
     mouse_controls = true,
-    -- Can go past 10 but you'll have to scroll down
+    -- Only the first 10 entries have key binds
     list_size = 15,
     -- Reads from config directory or an absolute path
     log_path = "history.log",
@@ -37,8 +37,9 @@ function esc_string(str)
 end
 
 -- Handle urls
-function getpath()
+function get_path()
     local path = mp.get_property("path")
+    if not path then return end
     if path:find("http.?://") then
         return path
     else
@@ -68,22 +69,15 @@ function unbind()
     mp.remove_key_binding("recent-9")
     mp.remove_key_binding("recent-0")
     mp.remove_key_binding("recent-ESC")
+    mp.remove_key_binding("recent-DEL")
     mp.set_osd_ass(0, 0, "")
     table_drawn = false
-end
-
--- Save file path to memory
--- `file-loaded` event
-function writepath()
-    unbind()
-    cur_file_path = getpath()
 end
 
 -- Write path to log on file end
 -- removing duplicates along the way
 -- `end-file` event or save_bind
-function writelog()
-    local saved = false -- Whether an entry was actually saved
+function write_log(delete)
     if not cur_file_path then return end
     local f = io.open(o.log_path, "r")
 
@@ -97,9 +91,8 @@ function writelog()
 
     -- Read file into memory and remove duplicates
     local content = {}
-    local is_last
     for line in f:lines() do
-        line, is_last = line:gsub("^.-"..esc_string(cur_file_path)..".-$", "")
+        line = line:gsub("^.-"..esc_string(cur_file_path)..".-$", "")
         if line ~= "" then
             content[#content+1] = line
         end
@@ -112,54 +105,39 @@ function writelog()
         f:write(("%s\n"):format(content[i]))
     end
 
-    -- If it's the last line and auto save is turned off then don't add it
-    if (is_last == 0) or o.auto_save then
+    -- If delete flag given then don't write path back to log
+    if delete == 0 then
         f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
-        saved = true
-    else
-        saved = false
     end
     f:close()
-    return saved
-end
-
--- Manual save key handler
-function writelog_handler()
-    local saved = writelog()
-    if saved then
-        mp.osd_message("Saved entry to log")
-        print("Saved entry to log")
-    else
-        mp.osd_message("Deleted entry from log")
-        print("Deleted entry from log")
-    end
 end
 
 -- Display list on OSD and terminal
-function drawtable(table, choice)
+function draw_table(table, choice)
     local size = #table
     local msg = string.format("{\\fscx%f}{\\fscy%f}{\\bord%f}",
                 o.font_scale, o.font_scale, o.border_size)
     local hi_start = string.format("{\\1c&H%s}", o.hi_color)
     local hi_end = "{\\1c&HFFFFFF}"
-    local key
-    for i=size, 1, -1 do
-        if i > size-9 then
-            key = size-i+1
-        elseif i == size-9 then
+    local max = o.list_size > size and size or o.list_size
+    for i=0, max-1, 1 do
+        local key
+        if i < 9 then
+            key = i+1
+        elseif i == 9 then
             key = 0
         else
             key = "●"
         end
 
         local p
-        if not o.split_urls and table[i]:find("http.?://") then
+        if not o.split_urls and table[size-i]:find("http.?://") then
             p = table[i]
         else
-            _, p = utils.split_path(table[i])
+            _, p = utils.split_path(table[size-i])
         end
 
-        if i == size-choice then
+        if i == choice then
             msg = msg..hi_start.."("..key..")  "..p.."\\N\\N"..hi_end
         else
             msg = msg.."("..key..")  "..p.."\\N\\N"
@@ -175,46 +153,60 @@ end
 -- Handle up/down keys
 function select(choice, inc, list)
     choice = choice + inc
-    if choice < 0 or choice >= #list then return choice-inc end
-    drawtable(list, choice)
+    local max = o.list_size < #list and o.list_size or #list
+    if choice < 0 or choice >= max then return choice-inc end
+    draw_table(list, choice)
     return choice
+end
+
+-- Delete selected entry from the log
+function delete(list, choice)
+    cur_file_path = list[#list-choice]
+    write_log(1)
+    print("Deleted \""..cur_file_path.."\"")
+    cur_file_path = get_path()
+    list = read_log()
+    draw_table(list, choice)
+    return list
 end
 
 -- Load file and remove binds
 function load(list, choice)
     unbind()
-    if choice >= #list then return end
+    local max = o.list_size < #list and o.list_size or #list
+    if choice >= max then return end
     mp.commandv("loadfile", list[#list-choice], "replace")
+end
+
+-- Read entries from the log into a list
+function read_log()
+    local f = io.open(o.log_path, "r")
+    if f == nil then return end
+    local list = {}
+    for line in f:lines() do
+        list[#list+1] = string.gsub(line, "^(%[.-%]%s)", "")
+    end
+    f:close()
+    return list
 end
 
 -- Read log, display list and add keybinds
 -- `idle` event or hotkey
-function readlog(table)
+function display_list()
     if table_drawn then
         unbind()
         return
     end
-    local f = io.open(o.log_path, "r")
-    if f == nil then return end
-    local content = {}
-    for line in f:lines() do
-        content[#content+1] = line
-    end
-    f:close()
 
-    local list = {}
-    if #content > o.list_size then
-        for i=(#content-o.list_size)+1, #content, 1 do
-            list[#list+1] = string.gsub(content[i], "^(%[.-%]%s)", "")
-        end
-    else
-        for i=1, #content, 1 do
-            list[i] = string.gsub(content[i], "^(%[.-%]%s)", "")
-        end
+    local list = read_log()
+    if not list or not list[1] then
+        mp.osd_message("Log empty")
+        return
     end
 
     local choice = 0
-    drawtable(list, choice)
+    draw_table(list, choice)
+
     mp.add_forced_key_binding("UP", "recent-UP", function()
         choice = select(choice, -1, list)
     end, {repeatable=true})
@@ -223,6 +215,9 @@ function readlog(table)
     end, {repeatable=true})
     mp.add_forced_key_binding("ENTER", "recent-ENTER", function()
         load(list, choice)
+    end)
+    mp.add_forced_key_binding("DEL", "recent-DEL", function()
+        list = delete(list, choice)
     end)
     if o.mouse_controls then
         mp.add_forced_key_binding("WHEEL_UP", "recent-WUP", function()
@@ -253,12 +248,21 @@ function readlog(table)
 end
 
 if o.auto_save then
-    mp.register_event("end-file", writelog)
+    mp.register_event("end-file", function() write_log(0) end)
 else
-    mp.add_key_binding(o.save_bind, "recent-save", writelog_handler)
+    mp.add_key_binding(o.save_bind, "recent-save", function()
+        write_log(0)
+        mp.osd_message("Saved entry to log")
+    end)
 end
+
 if o.auto_run_idle then
-    mp.register_event("idle", readlog)
+    mp.register_event("idle", display_list)
 end
-mp.register_event("file-loaded", writepath)
-mp.add_key_binding(o.display_bind, "display-recent", readlog)
+
+mp.register_event("file-loaded", function()
+    unbind()
+    cur_file_path = get_path()
+end)
+
+mp.add_key_binding(o.display_bind, "display-recent", display_list)
