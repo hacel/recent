@@ -18,7 +18,3 @@
 * Disabling `auto_save` makes it only save with a keybind
     * No save key is bound by default, see `script-opts`
 * See comments in the script for more info
-
-#### To do list:
-* ~~Add ability to browse the entire log from the menu~~
-* ?
