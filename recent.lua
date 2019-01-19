@@ -22,7 +22,9 @@ local o = {
     -- Highlight color in BGR hexadecimal
     hi_color = "H46CFFF",
     -- Splitting urls; yt links would look like `?watch...`
-    split_urls = false
+    split_urls = false,
+    -- Draw ellipsis at start/end denoting ommited entries
+    ellipsis = false
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
@@ -114,7 +116,12 @@ function draw_list(list, start, choice)
                 o.font_scale, o.font_scale, o.border_size)
     local hi_start = string.format("{\\1c&H%s}", o.hi_color)
     local hi_end = "{\\1c&HFFFFFF}"
-
+    if o.ellipsis then
+        if start ~= 0 then
+            msg = msg.."..."
+        end
+        msg = msg.."\\N\\N"
+    end
     for i=1, math.min(10, #list-start), 1 do
         local key
         if i < 10 then
@@ -139,7 +146,7 @@ function draw_list(list, start, choice)
             print("("..key..") "..p)
         end
     end
-    if start+10 < size then
+    if o.ellipsis and start+10 < size then
         msg = msg .."..."
     end
     mp.set_osd_ass(0, 0, msg)
