@@ -5,6 +5,8 @@ local o = {
     save_bind = "",
     -- Runs automatically when --idle
     auto_run_idle = true,
+    -- Write watch later for current file when switching
+    write_watch_later = true,
     -- Display menu bind
     display_bind = "`",
     -- Middle click: Select; Right click: Exit;
@@ -19,35 +21,31 @@ local o = {
     border_size = 0.7,
     -- Highlight color in BGR hexadecimal
     hi_color = "H46CFFF",
-    -- Splitting urls; yt links would look like `?watch...`
-    split_urls = false,
     -- Draw ellipsis at start/end denoting ommited entries
     ellipsis = false
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
-
 o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
-local cur_file_path
+
+local cur_title, cur_path
 local list_drawn = false
 
--- Escape string for pattern matching
 function esc_string(str)
     return str:gsub("([%p])", "%%%1")
 end
 
--- Handle urls
 function get_path()
     local path = mp.get_property("path")
+    local title = mp.get_property("media-title"):gsub("\"", "")
     if not path then return end
     if path:find("http.?://") then
-        return path
+        return title, path
     else
-        return utils.join_path(mp.get_property("working-directory"), path)
+        return title, utils.join_path(mp.get_property("working-directory"), path)
     end
 end
 
--- Script exit function
 function unbind()
     if o.mouse_controls then
         mp.remove_key_binding("recent-WUP")
@@ -74,42 +72,56 @@ function unbind()
     list_drawn = false
 end
 
--- Read entries from the log into a list
-function read_log(gsub)
+function read_log(func)
     local f = io.open(o.log_path, "r")
-    if f == nil then return end
+    if not f then return end
     local list = {}
     for line in f:lines() do
-        list[#list+1] = string.gsub(line, gsub, "")
+        table.insert(list, (func(line)))
     end
     f:close()
     return list
 end
 
+function read_log_table()
+    return read_log(function(line)
+        local t, p
+        -- for compatibility with old log format
+        if line:find("^.-%] \".-\" |") then
+            t, p = line:match("^.-\"(.-)\" | (.*)$")
+        else
+            p = line:match("^%[.-%] (.*)$")
+            t = p
+        end
+        return {title = t, path = p}
+    end)
+end
+
 -- Write path to log on file end
 -- removing duplicates along the way
 function write_log(delete)
-    if not cur_file_path then return end
-
-    local content = read_log("^.-"..esc_string(cur_file_path)..".-$")
-    local f = io.open(o.log_path, "w+")
+    if not cur_path then return end
+    local content = read_log(function(line)
+        if line:find(esc_string(cur_path)) then
+            return nil
+        else
+            return line
+        end
+    end)
+    f = io.open(o.log_path, "w+")
     if content then
         for i=1, #content do
-            if content[i] ~= "" then
-                f:write(("%s\n"):format(content[i]))
-            end
+            f:write(("%s\n"):format(content[i]))
         end
     end
-
     if not delete then
-        f:write(("[%s] %s\n"):format(os.date(o.date_format), cur_file_path))
+        f:write(("[%s] \"%s\" | %s\n"):format(os.date(o.date_format), cur_title, cur_path))
     end
     f:close()
 end
 
 -- Display list on OSD and terminal
 function draw_list(list, start, choice)
-    local size = #list
     local msg = string.format("{\\fscx%f}{\\fscy%f}{\\bord%f}",
                 o.font_scale, o.font_scale, o.border_size)
     local hi_start = string.format("{\\1c&H%s}", o.hi_color)
@@ -120,21 +132,15 @@ function draw_list(list, start, choice)
         end
         msg = msg.."\\N\\N"
     end
-    for i=1, math.min(10, #list-start), 1 do
+    local size = #list
+    for i=1, math.min(10, size-start), 1 do
         local key
         if i < 10 then
             key = i
         elseif i == 10 then
             key = 0
         end
-
-        local p
-        if not o.split_urls and list[size-start-i+1]:find("http.?://") then
-            p = list[size-start-i+1]
-        else
-            _, p = utils.split_path(list[size-start-i+1])
-        end
-
+        local p = list[size-start-i+1].title or list[size-start-i+1].path or ""
         if i == choice+1 then
             msg = msg..hi_start.."("..key..")  "..p.."\\N\\N"..hi_end
         else
@@ -171,24 +177,25 @@ end
 
 -- Delete selected entry from the log
 function delete(list, start, choice)
-    local playing_path = cur_file_path
-    cur_file_path = list[#list-start-choice]
-    if not cur_file_path then
+    local playing_path = cur_path
+    cur_path = list[#list-start-choice].path
+    if not cur_path then
         print("Failed to delete")
         return
     end
     write_log(true)
-    print("Deleted \""..cur_file_path.."\"")
-    cur_file_path = playing_path
-    list = read_log("^(%[.-%]%s)")
-    return list
+    print("Deleted \""..cur_path.."\"")
+    cur_path = playing_path
 end
 
 -- Load file and remove binds
 function load(list, start, choice)
     unbind()
     if start+choice >= #list then return end
-    mp.commandv("loadfile", list[#list-start-choice], "replace")
+    if o.write_watch_later then
+        mp.command("write-watch-later-config")
+    end
+    mp.commandv("loadfile", list[#list-start-choice].path, "replace")
 end
 
 -- Display list and add keybinds
@@ -197,13 +204,11 @@ function display_list()
         unbind()
         return
     end
-
-    local list = read_log("^(%[.-%]%s)")
+    local list = read_log_table()
     if not list or not list[1] then
         mp.osd_message("Log empty")
         return
     end
-
     local choice = 0
     local start = 0
     draw_list(list, start, choice)
@@ -219,11 +224,12 @@ function display_list()
         load(list, start, choice)
     end)
     mp.add_forced_key_binding("DEL", "recent-DEL", function()
+        delete(list, start, choice)
+        list = read_log_table()
         if not list or not list[1] then
             unbind()
             return
         end
-        list = delete(list, start, choice)
         start, choice = select(list, start, choice, 0)
     end)
     if o.mouse_controls then
@@ -268,7 +274,7 @@ end
 
 mp.register_event("file-loaded", function()
     unbind()
-    cur_file_path = get_path()
+    cur_title, cur_path = get_path()
 end)
 
 mp.add_key_binding(o.display_bind, "display-recent", display_list)
