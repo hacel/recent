@@ -1,6 +1,6 @@
 # recent.lua
-![recent-screenshot](https://raw.githubusercontent.com/nightedt/mpv-scripts/master/etc/recent.png)
-
+<img src="https://raw.githubusercontent.com/nightedt/mpv-scripts/master/etc/recent.png" width="640" height="360"></img>
+## Recently played menu
 ### Menu controls:
 * Default display hotkey is **`` ` ``**
 * Keyboard:
@@ -18,3 +18,6 @@
 * Disabling `auto_save` makes it only save with a keybind
     * No save key is bound by default, see `script-opts`
 * See comments in the script for more info
+
+# misc.lua
+### Independent functions that don't deserve their own file
