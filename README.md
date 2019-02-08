@@ -1,6 +1,6 @@
 # recent.lua
-<img src="https://raw.githubusercontent.com/nightedt/mpv-scripts/master/etc/recent.png" width="640" height="360"></img>
-## Recently played menu
+#### Recently played menu
+![](https://raw.githubusercontent.com/nightedt/mpv-scripts/master/etc/recent.png)
 ### Menu controls:
 * Default display hotkey is **`` ` ``**
 * Keyboard:
@@ -20,4 +20,4 @@
 * See comments in the script for more info
 
 # misc.lua
-### Independent functions that don't deserve their own file
+#### Independent functions that don't deserve their own file
