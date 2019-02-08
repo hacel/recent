@@ -16,6 +16,10 @@ local o = {
     log_path = "history.log",
     -- Reads from config directory or an absolute path
     date_format = "%d/%m/%y %X",
+    -- Show file paths instead of media-title
+    show_paths = false,
+    -- Split paths to only show the file or show the full path
+    split_paths = true,
     -- Font settings
     font_scale = 50,
     border_size = 0.7,
@@ -130,17 +134,21 @@ function draw_list(list, start, choice)
         if start ~= 0 then
             msg = msg.."..."
         end
-        msg = msg.."\\N\\N"
+        msg = msg.."\\h\\N\\N"
     end
     local size = #list
     for i=1, math.min(10, size-start), 1 do
-        local key
-        if i < 10 then
-            key = i
-        elseif i == 10 then
-            key = 0
+        local key = i % 10
+        local p
+        if o.show_paths then
+            if o.split_paths and not list[size-start-i+1].path:find("^http.?://") then
+                _, p = utils.split_path(list[size-start-i+1].path)
+            else
+                p = list[size-start-i+1].path or ""
+            end
+        else
+            p = list[size-start-i+1].title or list[size-start-i+1].path or ""
         end
-        local p = list[size-start-i+1].title or list[size-start-i+1].path or ""
         if i == choice+1 then
             msg = msg..hi_start.."("..key..")  "..p.."\\N\\N"..hi_end
         else
