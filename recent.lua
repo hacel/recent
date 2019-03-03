@@ -14,7 +14,7 @@ local o = {
     mouse_controls = true,
     -- Reads from config directory or an absolute path
     log_path = "history.log",
-    -- Reads from config directory or an absolute path
+    -- Date format in the log (see lua date formatting)
     date_format = "%d/%m/%y %X",
     -- Show file paths instead of media-title
     show_paths = false,
