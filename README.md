@@ -1,5 +1,8 @@
 # recent.lua
 #### Recently played menu
+Logs played files to a history log file with an interactive 'recently played' menu that reads from the log. Allows for automatic or manual logging if you want a file bookmark menu instead.
+
+
 ![](https://raw.githubusercontent.com/nightedt/mpv-scripts/master/etc/recent.png)
 ### Menu controls:
 * Default display hotkey is **`` ` ``**
