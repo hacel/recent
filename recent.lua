@@ -90,13 +90,7 @@ end
 function read_log_table()
     return read_log(function(line)
         local t, p
-        -- for compatibility with old log format
-        if line:find("^.-%] \".-\" |") then
-            t, p = line:match("^.-\"(.-)\" | (.*)$")
-        else
-            p = line:match("^%[.-%] (.*)$")
-            t = p
-        end
+        t, p = line:match("^.-\"(.-)\" | (.*)$")
         return {title = t, path = p}
     end)
 end
@@ -200,6 +194,13 @@ end
 function load(list, start, choice)
     unbind()
     if start+choice >= #list then return end
+    local f = io.open(list[#list-start-choice].path,"r")
+    if f~=nil then 
+        io.close(f) 
+    else 
+        mp.osd_message("Failed loading file: "..list[#list-start-choice].title)
+        return 
+    end
     if o.write_watch_later then
         mp.command("write-watch-later-config")
     end
