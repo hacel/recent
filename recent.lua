@@ -43,7 +43,7 @@ function get_path()
     local path = mp.get_property("path")
     local title = mp.get_property("media-title"):gsub("\"", "")
     if not path then return end
-    if path:find("http.?://") then
+    if path:find("http.?://") or path:find("magnet:%?") then
         return title, path
     else
         return title, utils.join_path(mp.get_property("working-directory"), path)
