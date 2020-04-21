@@ -194,13 +194,6 @@ end
 function load(list, start, choice)
     unbind()
     if start+choice >= #list then return end
-    local f = io.open(list[#list-start-choice].path,"r")
-    if f~=nil then 
-        io.close(f) 
-    else 
-        mp.osd_message("Failed loading file: "..list[#list-start-choice].title)
-        return 
-    end
     if o.write_watch_later then
         mp.command("write-watch-later-config")
     end
