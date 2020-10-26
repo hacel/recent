@@ -271,7 +271,9 @@ else
 end
 
 if o.auto_run_idle then
-    mp.register_event("idle", display_list)
+    mp.observe_property("idle-active", "bool", function(_, v)
+        if v then display_list() end
+    end)
 end
 
 mp.register_event("file-loaded", function()
