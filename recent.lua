@@ -269,7 +269,7 @@ if o.auto_save then
     -- Using hook, as at the "end-file" event the playback position info is already unset.
     mp.add_hook("on_unload", 9, function ()
        local pos = mp.get_property("percent-pos")
-       if tonumber(pos) < o.auto_save_skip_past then
+       if tonumber(pos) <= o.auto_save_skip_past then
           write_log(false)
        else
           write_log(true)
