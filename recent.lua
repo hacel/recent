@@ -3,6 +3,10 @@ local o = {
     -- you need to bind a save key if you disable it
     auto_save = true,
     save_bind = "",
+    -- When automatically saving, skip entries with playback positions
+    -- past this value, in percent. 100 saves all, around 95 is
+    -- good for skipping videos that have reached final credits.
+    auto_save_skip_past = 100,
     -- Runs automatically when --idle
     auto_run_idle = true,
     -- Write watch later for current file when switching
@@ -262,7 +266,15 @@ function display_list()
 end
 
 if o.auto_save then
-    mp.register_event("end-file", function() write_log(false) end)
+    -- Using hook, as at the "end-file" event the playback position info is already unset.
+    mp.add_hook("on_unload", 9, function ()
+       local pos = mp.get_property("percent-pos")
+       if tonumber(pos) <= o.auto_save_skip_past then
+          write_log(false)
+       else
+          write_log(true)
+       end
+    end)
 else
     mp.add_key_binding(o.save_bind, "recent-save", function()
         write_log(false)
