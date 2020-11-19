@@ -2,11 +2,11 @@ local o = {
     -- Automatically save to log, otherwise only saves when requested
     -- you need to bind a save key if you disable it
     auto_save = true,
+    save_bind = "",
     -- When automatically saving, skip entries with playback positions
     -- past this value, in percent. 100 saves all, around 95 is
     -- good for skipping videos that have reached final credits.
     auto_save_skip_past = 100,
-    save_bind = "",
     -- Runs automatically when --idle
     auto_run_idle = true,
     -- Write watch later for current file when switching
