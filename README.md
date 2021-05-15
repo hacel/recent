@@ -3,7 +3,7 @@
 Logs played files to a history log file with an interactive 'recently played' menu that reads from the log. Allows for automatic or manual logging if you want a file bookmark menu instead.
 
 
-![](https://raw.githubusercontent.com/nightedt/mpv-scripts/master/etc/recent.png)
+![](../assets/recent.png)
 ### Menu controls:
 * Default display hotkey is **`` ` ``**
 * Keyboard:
@@ -21,6 +21,3 @@ Logs played files to a history log file with an interactive 'recently played' me
 * Disabling `auto_save` makes it only save with a keybind
     * No save key is bound by default, see `script-opts`
 * See comments in the script for more info
-
-# misc.lua
-#### Independent functions that don't deserve their own file
