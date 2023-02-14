@@ -22,6 +22,9 @@ local o = {
     date_format = "%d/%m/%y %X",
     -- Show file paths instead of media-title
     show_paths = false,
+    --slice long filenames, and how many chars to show
+    slice_longfilenames = false,
+    slice_longfilenames_amount = 100,
     -- Split paths to only show the file or show the full path
     split_paths = true,
     -- Font settings
@@ -30,7 +33,9 @@ local o = {
     -- Highlight color in BGR hexadecimal
     hi_color = "H46CFFF",
     -- Draw ellipsis at start/end denoting ommited entries
-    ellipsis = false
+    ellipsis = false,
+    --Change maximum number to show items on uosc-submenu
+    list_show_amount = 20,
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
@@ -38,16 +43,28 @@ o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
 
 local cur_title, cur_path
 local list_drawn = false
+local uosc_available = false
 
 function esc_string(str)
     return str:gsub("([%p])", "%%%1")
+end
+
+function is_protocol(path)
+    return type(path) == 'string' and path:match('^%a[%a%d-_]+://') ~= nil
+end
+
+function striptitle(str)
+    if o.slice_longfilenames and str:len() > o.slice_longfilenames_amount + 5 then
+        str = str:sub(1, o.slice_longfilenames_amount) .. " ..."
+    end
+    return str
 end
 
 function get_path()
     local path = mp.get_property("path")
     local title = mp.get_property("media-title"):gsub("\"", "")
     if not path then return end
-    if path:find("http.?://") or path:find("magnet:%?") or path:find("rtmp://") then
+    if is_protocol(path) then
         return title, path
     else
         return title, utils.join_path(mp.get_property("working-directory"), path)
@@ -85,7 +102,9 @@ function read_log(func)
     if not f then return end
     local list = {}
     for line in f:lines() do
-        table.insert(list, (func(line)))
+        if not line:match("^%s*$") then
+            table.insert(list, (func(line)))
+        end
     end
     f:close()
     return list
@@ -139,7 +158,7 @@ function draw_list(list, start, choice)
         local key = i % 10
         local p
         if o.show_paths then
-            if o.split_paths and not list[size-start-i+1].path:find("^http.?://") then
+            if o.split_paths and not is_protocol(list[size-start-i+1].path) then
                 _, p = utils.split_path(list[size-start-i+1].path)
             else
                 p = list[size-start-i+1].title or ""
@@ -147,10 +166,11 @@ function draw_list(list, start, choice)
         else
             p = list[size-start-i+1].title or list[size-start-i+1].path or ""
         end
+        p = p:gsub("\\", '/'):gsub("{", "\\{"):gsub("^ ", "\\h")
         if i == choice+1 then
-            msg = msg..hi_start.."("..key..")  "..p.."\\N\\N"..hi_end
+            msg = msg..hi_start.."("..key..")  "..striptitle(p).."\\N\\N"..hi_end
         else
-            msg = msg.."("..key..")  "..p.."\\N\\N"
+            msg = msg.."("..key..")  "..striptitle(p).."\\N\\N"
         end
         if not list_drawn then
             print("("..key..") "..p)
@@ -204,6 +224,28 @@ function load(list, start, choice)
     mp.commandv("loadfile", list[#list-start-choice].path, "replace")
 end
 
+-- Open the recent submenu for uosc
+function open_menu(lists)
+    local menu = {
+        type = 'recent_menu',
+        title = 'Recent',
+        items = { { title = 'Nothing here', value = 'ignore' } },
+    }
+    if #lists > o.list_show_amount then
+        length = o.list_show_amount
+    else
+        length = #lists
+    end
+    for i = 1, length do
+        menu.items[i] = {
+            title = o.show_paths and striptitle(lists[#lists-i+1].path) or striptitle(lists[#lists-i+1].title),
+            value = { "loadfile", lists[#lists-i+1].path, "replace" },
+        }
+    end
+    local json = utils.format_json(menu)
+    mp.commandv('script-message-to', 'uosc', 'open-menu', json)
+end
+
 -- Display list and add keybinds
 function display_list()
     if list_drawn then
@@ -211,6 +253,7 @@ function display_list()
         return
     end
     local list = read_log_table()
+    if uosc_available then open_menu(list) return end
     if not list or not list[1] then
         mp.osd_message("Log empty")
         return
@@ -282,6 +325,12 @@ else
         mp.osd_message("Saved entry to log")
     end)
 end
+
+-- check if uosc is running
+mp.register_script_message('uosc-version', function(version)
+    uosc_available = true
+end)
+mp.commandv('script-message-to', 'uosc', 'get-version', mp.get_script_name())
 
 if o.auto_run_idle then
     mp.observe_property("idle-active", "bool", function(_, v)
