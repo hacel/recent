@@ -30,7 +30,11 @@ local o = {
     -- Highlight color in BGR hexadecimal
     hi_color = "H46CFFF",
     -- Draw ellipsis at start/end denoting ommited entries
-    ellipsis = false
+    ellipsis = false,
+    -- Don't log certain media types
+    ignore_audio = true,
+    ignore_picture = true,
+    ignore_video = false
 }
 (require "mp.options").read_options(o)
 local utils = require("mp.utils")
@@ -38,6 +42,20 @@ o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
 
 local cur_title, cur_path
 local list_drawn = false
+
+function get_content_type()
+    local track_list = mp.get_property_native("track-list")
+    local file_type = ""
+    for _, track in ipairs(track_list) do        
+        if track.type == "audio" then file_type = "audio"
+        elseif not track.albumart and (track["demux-fps"] or 2) > 1 then
+            file_type = "video" 
+        elseif track.type == "video" and not track.albumart and track["demux-fps"] == 1 then
+            file_type = "picture"
+        end
+    end
+    return file_type
+end
 
 function esc_string(str)
     return str:gsub("([%p])", "%%%1")
@@ -102,7 +120,10 @@ end
 -- Write path to log on file end
 -- removing duplicates along the way
 function write_log(delete)
-    if not cur_path then return end
+    if not cur_path then return end 
+    if o.ignore_audio and get_content_type() == "audio" then return
+    elseif o.ignore_picture and get_content_type() == "picture" then return
+    elseif o.ignore_video and get_content_type() == "video" then return end
     local content = read_log(function(line)
         if line:find(esc_string(cur_path)) then
             return nil
