@@ -34,7 +34,7 @@ local o = {
     hi_color = "H46CFFF",
     -- Draw ellipsis at start/end denoting ommited entries
     ellipsis = false,
-    --Change maximum number to show items on uosc-submenu
+    --Change maximum number to show items on submenu
     list_show_amount = 20,
 }
 (require "mp.options").read_options(o)
@@ -69,6 +69,14 @@ local function utf8_sub(s, i, j)
     return table.concat(t)
 end
 
+function split_ext(filename)
+    local idx = filename:match(".+()%.%w+$")
+    if idx then
+        filename = filename:sub(1, idx - 1)
+    end
+    return filename
+end
+
 function striptitle(str)
     if o.slice_longfilenames and str:len() > o.slice_longfilenames_amount + 5 then
         str = utf8_sub(str, 1, o.slice_longfilenames_amount) .. "..."
@@ -82,6 +90,11 @@ function get_ext(path)
     else
         return path:match(".+%.(%w+)$"):upper()
     end
+end
+
+function get_filename(path)
+    local dir, filename = utils.split_path(path)
+    return filename
 end
 
 function get_path()
@@ -142,6 +155,34 @@ function read_log_table()
     end)
 end
 
+local dyn_menu = {
+    ready = false,
+    type = 'submenu',
+    submenu = {}
+}
+
+function update_dyn_menu_items()
+    local lists = read_log_table()
+    if not lists or not lists[1] then
+        return
+    end
+    local menu = {}
+    if #lists > o.list_show_amount then
+        length = o.list_show_amount
+    else
+        length = #lists
+    end
+    for i = 1, length do
+        menu[#menu + 1] = {
+            title = string.format('%s\t%s', o.show_paths and striptitle(split_ext(get_filename(lists[#lists-i+1].path)))
+            or striptitle(split_ext(lists[#lists-i+1].title)), get_ext(lists[#lists-i+1].path)),
+            cmd = string.format("loadfile '%s'", lists[#lists-i+1].path),
+        }
+    end
+    dyn_menu.submenu = menu
+    mp.commandv('script-message-to', 'dyn_menu', 'update', 'recent', utils.format_json(dyn_menu))
+end
+
 -- Write path to log on file end
 -- removing duplicates along the way
 function write_log(delete)
@@ -163,6 +204,9 @@ function write_log(delete)
         f:write(("[%s] \"%s\" | %s\n"):format(os.date(o.date_format), cur_title, cur_path))
     end
     f:close()
+    if dyn_menu.ready then
+        update_dyn_menu_items()
+    end
 end
 
 -- Display list on OSD and terminal
@@ -183,7 +227,7 @@ function draw_list(list, start, choice)
         local p
         if o.show_paths then
             if o.split_paths and not is_protocol(list[size-start-i+1].path) then
-                _, p = utils.split_path(list[size-start-i+1].path)
+                p = get_filename(list[size-start-i+1].path)
             else
                 p = list[size-start-i+1].title or ""
             end
@@ -262,7 +306,8 @@ function open_menu(lists)
     end
     for i = 1, length do
         menu.items[i] = {
-            title = o.show_paths and striptitle(lists[#lists-i+1].path) or striptitle(lists[#lists-i+1].title),
+            title = o.show_paths and striptitle(split_ext(get_filename(lists[#lists-i+1].path)))
+            or striptitle(split_ext(lists[#lists-i+1].title)),
             hint = get_ext(lists[#lists-i+1].path),
             value = { "loadfile", lists[#lists-i+1].path, "replace" },
         }
@@ -350,6 +395,12 @@ else
         mp.osd_message("Saved entry to log")
     end)
 end
+
+-- mpv-menu-plugin integration
+mp.register_script_message('menu-ready', function()
+    dyn_menu.ready = true
+    update_dyn_menu_items()
+end)
 
 -- check if uosc is running
 mp.register_script_message('uosc-version', function(version)
