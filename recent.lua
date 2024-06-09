@@ -53,9 +53,25 @@ function is_protocol(path)
     return type(path) == 'string' and path:match('^%a[%a%d-_]+://') ~= nil
 end
 
+-- from http://lua-users.org/wiki/LuaUnicode
+local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
+
+-- return a substring based on utf8 characters
+-- like string.sub, but negative index is not supported
+local function utf8_sub(s, i, j)
+    local t = {}
+    local idx = 1
+    for match in s:gmatch(UTF8_PATTERN) do
+        if j and idx > j then break end
+        if idx >= i then t[#t + 1] = match end
+        idx = idx + 1
+    end
+    return table.concat(t)
+end
+
 function striptitle(str)
     if o.slice_longfilenames and str:len() > o.slice_longfilenames_amount + 5 then
-        str = str:sub(1, o.slice_longfilenames_amount) .. " ..."
+        str = utf8_sub(str, 1, o.slice_longfilenames_amount) .. "..."
     end
     return str
 end
