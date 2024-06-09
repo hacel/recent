@@ -7,6 +7,9 @@ local o = {
     -- past this value, in percent. 100 saves all, around 95 is
     -- good for skipping videos that have reached final credits.
     auto_save_skip_past = 100,
+    -- Files in the same directory are not duplicated in the record
+    -- only the latest is saved
+    del_same_dir = false,
     -- Runs automatically when --idle
     auto_run_idle = true,
     -- Write watch later for current file when switching
@@ -102,9 +105,11 @@ function get_path()
     local title = mp.get_property("media-title"):gsub("\"", "")
     if not path then return end
     if is_protocol(path) then
-        return title, path
+        return title, path, nil
     else
-        return title, utils.join_path(mp.get_property("working-directory"), path)
+        local path = utils.join_path(mp.get_property("working-directory"), path)
+        local dir, filename = utils.split_path(path)
+        return title, path, dir
     end
 end
 
@@ -188,7 +193,9 @@ end
 function write_log(delete)
     if not cur_path then return end
     local content = read_log(function(line)
-        if line:find(esc_string(cur_path)) then
+        if o.del_same_dir and cur_dir and line:find(esc_string(cur_dir)) then
+            return nil
+        elseif line:find(esc_string(cur_path)) then
             return nil
         else
             return line
@@ -416,7 +423,7 @@ end
 
 mp.register_event("file-loaded", function()
     unbind()
-    cur_title, cur_path = get_path()
+    cur_title, cur_path, cur_dir = get_path()
 end)
 
 mp.add_key_binding(o.display_bind, "display-recent", display_list)
