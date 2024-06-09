@@ -191,7 +191,10 @@ end
 -- Write path to log on file end
 -- removing duplicates along the way
 function write_log(delete)
-    if not cur_path then return end
+    if not cur_path or (cur_path:match("bd://") or cur_path:match("dvd://")
+    or cur_path:match("dvb://") or cur_path:match("cdda://")) then
+        return
+    end
     local content = read_log(function(line)
         if o.del_same_dir and cur_dir and line:find(esc_string(cur_dir)) then
             return nil
