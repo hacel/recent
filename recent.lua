@@ -76,6 +76,14 @@ function striptitle(str)
     return str
 end
 
+function get_ext(path)
+    if is_protocol(path) then
+        return path:match("^(%a[%w.+-]-)://"):upper()
+    else
+        return path:match(".+%.(%w+)$"):upper()
+    end
+end
+
 function get_path()
     local path = mp.get_property("path")
     local title = mp.get_property("media-title"):gsub("\"", "")
@@ -255,6 +263,7 @@ function open_menu(lists)
     for i = 1, length do
         menu.items[i] = {
             title = o.show_paths and striptitle(lists[#lists-i+1].path) or striptitle(lists[#lists-i+1].title),
+            hint = get_ext(lists[#lists-i+1].path),
             value = { "loadfile", lists[#lists-i+1].path, "replace" },
         }
     end
@@ -269,11 +278,11 @@ function display_list()
         return
     end
     local list = read_log_table()
-    if uosc_available then open_menu(list) return end
     if not list or not list[1] then
         mp.osd_message("Log empty")
         return
     end
+    if uosc_available then open_menu(list) return end
     local choice = 0
     local start = 0
     draw_list(list, start, choice)
@@ -350,7 +359,7 @@ mp.commandv('script-message-to', 'uosc', 'get-version', mp.get_script_name())
 
 if o.auto_run_idle then
     mp.observe_property("idle-active", "bool", function(_, v)
-        if v then display_list() end
+        if v and not uosc_available then display_list() end
     end)
 end
 
