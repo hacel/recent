@@ -22,6 +22,12 @@ Logs played files to a history log file with an interactive 'recently played' me
     * No save key is bound by default, see `script-opts`
 * See comments in the script for more info
 
+#### Play most recent one.
+
+```ini
+KEY                 script-binding recent/play-last
+```
+
 ### uosc integration
 
 **[tomasklaen/uosc](https://github.com/tomasklaen/uosc) is required.**

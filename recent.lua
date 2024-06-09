@@ -80,7 +80,7 @@ function split_ext(filename)
     return filename
 end
 
-function striptitle(str)
+function strip_title(str)
     if o.slice_longfilenames and str:len() > o.slice_longfilenames_amount + 5 then
         str = utf8_sub(str, 1, o.slice_longfilenames_amount) .. "..."
     end
@@ -179,8 +179,8 @@ function update_dyn_menu_items()
     end
     for i = 1, length do
         menu[#menu + 1] = {
-            title = string.format('%s\t%s', o.show_paths and striptitle(split_ext(get_filename(lists[#lists-i+1].path)))
-            or striptitle(split_ext(lists[#lists-i+1].title)), get_ext(lists[#lists-i+1].path)),
+            title = string.format('%s\t%s', o.show_paths and strip_title(split_ext(get_filename(lists[#lists-i+1].path)))
+            or strip_title(split_ext(lists[#lists-i+1].title)), get_ext(lists[#lists-i+1].path)),
             cmd = string.format("loadfile '%s'", lists[#lists-i+1].path),
         }
     end
@@ -243,9 +243,9 @@ function draw_list(list, start, choice)
         end
         p = p:gsub("\\", '/'):gsub("{", "\\{"):gsub("^ ", "\\h")
         if i == choice+1 then
-            msg = msg..hi_start.."("..key..")  "..striptitle(p).."\\N\\N"..hi_end
+            msg = msg..hi_start.."("..key..")  "..strip_title(p).."\\N\\N"..hi_end
         else
-            msg = msg.."("..key..")  "..striptitle(p).."\\N\\N"
+            msg = msg.."("..key..")  "..strip_title(p).."\\N\\N"
         end
         if not list_drawn then
             print("("..key..") "..p)
@@ -299,6 +299,15 @@ function load(list, start, choice)
     mp.commandv("loadfile", list[#list-start-choice].path, "replace")
 end
 
+-- play last played file
+function play_last()
+    local lists = read_log_table()
+    if not lists or not lists[1] then
+        return
+    end
+    mp.commandv("loadfile", lists[#lists].path, "replace")
+end
+
 -- Open the recent submenu for uosc
 function open_menu(lists)
     local menu = {
@@ -313,8 +322,8 @@ function open_menu(lists)
     end
     for i = 1, length do
         menu.items[i] = {
-            title = o.show_paths and striptitle(split_ext(get_filename(lists[#lists-i+1].path)))
-            or striptitle(split_ext(lists[#lists-i+1].title)),
+            title = o.show_paths and strip_title(split_ext(get_filename(lists[#lists-i+1].path)))
+            or strip_title(split_ext(lists[#lists-i+1].title)),
             hint = get_ext(lists[#lists-i+1].path),
             value = { "loadfile", lists[#lists-i+1].path, "replace" },
         }
@@ -396,11 +405,6 @@ if o.auto_save then
             write_log(true)
         end
     end)
-else
-    mp.add_key_binding(o.save_bind, "recent-save", function()
-        write_log(false)
-        mp.osd_message("Saved entry to log")
-    end)
 end
 
 -- mpv-menu-plugin integration
@@ -427,3 +431,8 @@ mp.register_event("file-loaded", function()
 end)
 
 mp.add_key_binding(o.display_bind, "display-recent", display_list)
+mp.add_key_binding(o.save_bind, "recent-save", function()
+    write_log(false)
+    mp.osd_message("Saved entry to log")
+end)
+mp.add_key_binding(nil, "play-last", play_last)
