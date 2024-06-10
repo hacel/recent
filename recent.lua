@@ -39,7 +39,7 @@ local o = {
     --Change maximum number to show items on submenu
     list_show_amount = 20,
 }
-(require "mp.options").read_options(o)
+(require "mp.options").read_options(o, _, function() end)
 local utils = require("mp.utils")
 o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
 
@@ -437,19 +437,6 @@ function display_list()
     mp.add_forced_key_binding("ESC", "recent-ESC", function() unbind() end)
 end
 
-if o.auto_save then
-    -- Using hook, as at the "end-file" event the playback position info is already unset.
-    mp.add_hook("on_unload", 9, function ()
-        local pos = mp.get_property("percent-pos")
-        if not pos then return end
-        if tonumber(pos) <= o.auto_save_skip_past then
-            write_log(false)
-        else
-            write_log(true)
-        end
-    end)
-end
-
 -- mpv-menu-plugin integration
 mp.register_script_message('menu-ready', function()
     dyn_menu.ready = true
@@ -471,6 +458,18 @@ end
 mp.register_event("file-loaded", function()
     unbind()
     cur_title, cur_path = get_path()
+end)
+
+-- Using hook, as at the "end-file" event the playback position info is already unset.
+mp.add_hook("on_unload", 9, function ()
+    if not o.auto_save then return end
+    local pos = mp.get_property("percent-pos")
+    if not pos then return end
+    if tonumber(pos) <= o.auto_save_skip_past then
+        write_log(false)
+    else
+        write_log(true)
+    end
 end)
 
 mp.add_key_binding(o.display_bind, "display-recent", display_list)
