@@ -7,9 +7,8 @@ local o = {
     -- past this value, in percent. 100 saves all, around 95 is
     -- good for skipping videos that have reached final credits.
     auto_save_skip_past = 100,
-    -- Files in the same directory are not duplicated in the record
-    -- only the latest is saved
-    del_same_dir = false,
+    -- Display only the latest file from each directory
+    hide_same_dir = false,
     -- Runs automatically when --idle
     auto_run_idle = true,
     -- Write watch later for current file when switching
@@ -47,6 +46,7 @@ o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
 local cur_title, cur_path
 local list_drawn = false
 local uosc_available = false
+local is_windows = package.config:sub(1,1) == "\\"
 
 function esc_string(str)
     return str:gsub("([%p])", "%%%1")
@@ -95,8 +95,19 @@ function get_ext(path)
     end
 end
 
-function get_filename(path)
+function get_dir(path)
+    if is_protocol(path) then
+        return path
+    end
     local dir, filename = utils.split_path(path)
+    return dir
+end
+
+function get_filename(item)
+    if is_protocol(item.path) then
+        return item.title
+    end
+    local dir, filename = utils.split_path(item.path)
     return filename
 end
 
@@ -105,11 +116,13 @@ function get_path()
     local title = mp.get_property("media-title"):gsub("\"", "")
     if not path then return end
     if is_protocol(path) then
-        return title, path, nil
+        return title, path
     else
         local path = utils.join_path(mp.get_property("working-directory"), path)
-        local dir, filename = utils.split_path(path)
-        return title, path, dir
+        if is_windows then
+            path = path:gsub("/", "\\")
+        end
+        return title, path
     end
 end
 
@@ -160,6 +173,29 @@ function read_log_table()
     end)
 end
 
+function table_reverse(table)
+    local reversed_table = {}
+    for i = 1, #table do
+        reversed_table[#table - i + 1] = table[i]
+    end
+    return reversed_table
+end
+
+function hide_same_dir(content)
+    local lists = {}
+    local dir_cache = {}
+    for i = 1, #content do
+        local dirname = get_dir(content[#content-i+1].path)
+        if not dir_cache[dirname] then
+            table.insert(lists, content[#content-i+1])
+        end
+        if dirname ~= "." then
+            dir_cache[dirname] = true
+        end
+    end
+    return table_reverse(lists)
+end
+
 local dyn_menu = {
     ready = false,
     type = 'submenu',
@@ -167,11 +203,14 @@ local dyn_menu = {
 }
 
 function update_dyn_menu_items()
+    local menu = {}
     local lists = read_log_table()
     if not lists or not lists[1] then
         return
     end
-    local menu = {}
+    if o.hide_same_dir then
+        lists = hide_same_dir(lists)
+    end
     if #lists > o.list_show_amount then
         length = o.list_show_amount
     else
@@ -179,7 +218,7 @@ function update_dyn_menu_items()
     end
     for i = 1, length do
         menu[#menu + 1] = {
-            title = string.format('%s\t%s', o.show_paths and strip_title(split_ext(get_filename(lists[#lists-i+1].path)))
+            title = string.format('%s\t%s', o.show_paths and strip_title(split_ext(get_filename(lists[#lists-i+1])))
             or strip_title(split_ext(lists[#lists-i+1].title)), get_ext(lists[#lists-i+1].path)),
             cmd = string.format("loadfile '%s'", lists[#lists-i+1].path),
         }
@@ -196,9 +235,7 @@ function write_log(delete)
         return
     end
     local content = read_log(function(line)
-        if o.del_same_dir and cur_dir and line:find(esc_string(cur_dir)) then
-            return nil
-        elseif line:find(esc_string(cur_path)) then
+        if line:find(esc_string(cur_path)) then
             return nil
         else
             return line
@@ -244,7 +281,7 @@ function draw_list(list, start, choice)
         else
             p = list[size-start-i+1].title or list[size-start-i+1].path or ""
         end
-        p = p:gsub("\\", '/'):gsub("{", "\\{"):gsub("^ ", "\\h")
+        p = p:gsub("\\", "\\\239\187\191"):gsub("{", "\\{"):gsub("^ ", "\\h")
         if i == choice+1 then
             msg = msg..hi_start.."("..key..")  "..strip_title(p).."\\N\\N"..hi_end
         else
@@ -325,7 +362,7 @@ function open_menu(lists)
     end
     for i = 1, length do
         menu.items[i] = {
-            title = o.show_paths and strip_title(split_ext(get_filename(lists[#lists-i+1].path)))
+            title = o.show_paths and strip_title(split_ext(get_filename(lists[#lists-i+1])))
             or strip_title(split_ext(lists[#lists-i+1].title)),
             hint = get_ext(lists[#lists-i+1].path),
             value = { "loadfile", lists[#lists-i+1].path, "replace" },
@@ -345,6 +382,9 @@ function display_list()
     if not list or not list[1] then
         mp.osd_message("Log empty")
         return
+    end
+    if o.hide_same_dir then
+        list = hide_same_dir(list)
     end
     if uosc_available then open_menu(list) return end
     local choice = 0
@@ -430,7 +470,7 @@ end
 
 mp.register_event("file-loaded", function()
     unbind()
-    cur_title, cur_path, cur_dir = get_path()
+    cur_title, cur_path = get_path()
 end)
 
 mp.add_key_binding(o.display_bind, "display-recent", display_list)
