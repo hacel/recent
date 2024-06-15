@@ -19,7 +19,7 @@ local o = {
     -- Scroll wheel: Up/Down
     mouse_controls = true,
     -- Reads from config directory or an absolute path
-    log_path = "history.log",
+    log_path = "~~/history.log",
     -- Date format in the log (see lua date formatting)
     date_format = "%d/%m/%y %X",
     -- Show file paths instead of media-title
@@ -41,7 +41,7 @@ local o = {
 }
 (require "mp.options").read_options(o, _, function() end)
 local utils = require("mp.utils")
-o.log_path = utils.join_path(mp.find_config_file("."), o.log_path)
+log_path = mp.command_native({ "expand-path", o.log_path })
 
 local cur_title, cur_path
 local list_drawn = false
@@ -153,7 +153,7 @@ function unbind()
 end
 
 function read_log(func)
-    local f = io.open(o.log_path, "r")
+    local f = io.open(log_path, "r")
     if not f then return end
     local list = {}
     for line in f:lines() do
@@ -241,7 +241,7 @@ function write_log(delete)
             return line
         end
     end)
-    f = io.open(o.log_path, "w+")
+    f = io.open(log_path, "w+")
     if content then
         for i=1, #content do
             f:write(("%s\n"):format(content[i]))
