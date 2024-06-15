@@ -258,8 +258,9 @@ end
 
 -- Display list on OSD and terminal
 function draw_list(list, start, choice)
+    local font_scale = o.font_scale * (display_scale or 1)
     local msg = string.format("{\\fscx%f}{\\fscy%f}{\\bord%f}",
-                o.font_scale, o.font_scale, o.border_size)
+                font_scale, font_scale, o.border_size)
     local hi_start = string.format("{\\1c&H%s}", o.hi_color)
     local hi_end = "{\\1c&HFFFFFF}"
     if o.ellipsis then
@@ -437,6 +438,14 @@ function display_list()
     mp.add_forced_key_binding("ESC", "recent-ESC", function() unbind() end)
 end
 
+local function run_idle()
+    mp.observe_property("idle-active", "bool", function(_, v)
+        if o.auto_run_idle and v and not uosc_available then
+            display_list()
+        end
+    end)
+end
+
 -- mpv-menu-plugin integration
 mp.register_script_message('menu-ready', function()
     dyn_menu.ready = true
@@ -449,11 +458,12 @@ mp.register_script_message('uosc-version', function(version)
 end)
 mp.commandv('script-message-to', 'uosc', 'get-version', mp.get_script_name())
 
-if o.auto_run_idle then
-    mp.observe_property("idle-active", "bool", function(_, v)
-        if v and not uosc_available then display_list() end
-    end)
-end
+mp.observe_property("display-hidpi-scale", "native", function(_, scale)
+    if scale then
+        display_scale = scale
+        run_idle()
+    end
+end)
 
 mp.register_event("file-loaded", function()
     unbind()
