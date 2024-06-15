@@ -44,12 +44,6 @@ KEY                 script-binding recent/display-recent          #! Recently pl
 command:history:script-message-to recent display-recent?Recently played
 ```
 
-Play most recent one.
-
-```ini
-KEY                 script-binding recent/display-recent
-```
-
 ### mpv-menu-plugin integration
 
 **[mpv-menu-plugin](https://github.com/tsl0922/mpv-menu-plugin) is required.**
