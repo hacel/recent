@@ -274,10 +274,10 @@ function draw_list(list, start, choice)
         local key = i % 10
         local p
         if o.show_paths then
-            if o.split_paths and not is_protocol(list[size-start-i+1].path) then
-                p = get_filename(list[size-start-i+1].path)
+            if o.split_paths or is_protocol(list[size-start-i+1].path) then
+                p = get_filename(list[size-start-i+1])
             else
-                p = list[size-start-i+1].title or ""
+                p = list[size-start-i+1].path or ""
             end
         else
             p = list[size-start-i+1].title or list[size-start-i+1].path or ""
