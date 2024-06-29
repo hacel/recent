@@ -36,7 +36,7 @@ local o = {
     hi_color = "H46CFFF",
     -- Draw ellipsis at start/end denoting ommited entries
     ellipsis = false,
-    --Change maximum number to show items on submenu
+    --Change maximum number to show items on integrated submenus in uosc or mpv-menu-plugin
     list_show_amount = 20,
 }
 (require "mp.options").read_options(o, _, function() end)
