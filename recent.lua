@@ -56,6 +56,30 @@ function is_protocol(path)
     return type(path) == 'string' and path:match('^%a[%a%d-_]+://') ~= nil
 end
 
+function normalize(path)
+    if normalize_path ~= nil then
+        if normalize_path then
+            path = mp.command_native({"normalize-path", path})
+        else
+            local directory = mp.get_property("working-directory", "")
+            path = mp.utils.join_path(directory, path:gusb('^%.[\\/]',''))
+            if is_windows then path = path:gsub("\\", "/") end
+        end
+        return path
+    end
+
+    normalize_path = false
+
+    local commands = mp.get_property_native("command-list", {})
+    for _, command in ipairs(commands) do
+        if command.name == "normalize-path" then
+            normalize_path = true
+            break
+        end
+    end
+    return normalize(path)
+end
+
 -- from http://lua-users.org/wiki/LuaUnicode
 local UTF8_PATTERN = '[%z\1-\127\194-\244][\128-\191]*'
 
@@ -118,10 +142,7 @@ function get_path()
     if is_protocol(path) then
         return title, path
     else
-        local path = utils.join_path(mp.get_property("working-directory"), path)
-        if is_windows then
-            path = path:gsub("/", "\\")
-        end
+        local path = normalize(path)
         return title, path
     end
 end
